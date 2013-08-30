@@ -3,6 +3,7 @@
 module System.Hardware.Serialport.Posix where
 
 import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Unsafe as B
 import qualified Control.Exception as Ex
 import System.Posix.IO
 import System.Posix.Types
@@ -97,12 +98,19 @@ withEncoding _ fun = fun
 -- |Receive bytes, given the maximum number
 recv :: SerialPort -> Int -> IO B.ByteString
 recv (SerialPort fd' _) n = do
+  n' <- B.unsafeUseAsCStringLen b $ \(ptr,_) -> 
+          fdReadBuf fd' (castPtr ptr) (fromIntegral n)
+  return $ B.take (fromIntegral n') b
+  where b = B.replicate n '\0'
+{-
   result <- withEncoding char8 $ Ex.try $ fdRead fd' count :: IO (Either IOError (String, ByteCount))
+  
   case result of
      Right (str, _) -> return $ B.pack str
      Left _         -> return B.empty
   where
     count = fromIntegral n
+-}
 
 
 -- |Send bytes
